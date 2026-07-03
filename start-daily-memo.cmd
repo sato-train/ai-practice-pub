@@ -1,6 +1,6 @@
 @echo off
 title Daily Memo Server
-cd /d "E:\ai-practice\tool_daily_memo"
+cd /d "%~dp0"
 set "CODEX=C:\Users\USER\.codex\plugins\.plugin-appserver\codex.exe"
 
 "%CODEX%" login status >nul 2>&1
@@ -15,7 +15,7 @@ if errorlevel 1 (
   )
 )
 
-"C:\Users\USER\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" "E:\ai-practice\tool_daily_memo\server.py"
+"C:\Users\USER\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" "%~dp0server.py"
 if errorlevel 1 (
   echo.
   echo Daily Memo failed to start.
