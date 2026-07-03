@@ -1,0 +1,4 @@
+__pycache__/
+*.py[cod]
+.daily-memo.pid
+daily-memo-*.log
