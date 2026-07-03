@@ -83,6 +83,7 @@ textarea::placeholder { color: #aaa99f; }
 .next-button:disabled, .record-button:disabled { cursor: wait; opacity: .55; transform: none; }
 .copy-button { padding: 0 20px; }
 footer { display: flex; justify-content: space-between; padding: 28px 0 42px; border-top: 1px solid var(--line); color: #96958c; font-family: Georgia, serif; font-size: 11px; font-style: italic; }
+.app-version { font-family: "DM Sans", "Noto Sans JP", sans-serif; font-size: 9px; font-style: normal; letter-spacing: .08em; text-transform: uppercase; }
 .toast { position: fixed; left: 50%; bottom: 28px; z-index: 5; padding: 11px 18px; color: white; background: var(--ink); border-radius: 3px; font-size: 12px; opacity: 0; transform: translate(-50%, 15px); pointer-events: none; transition: .25s; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .settings-overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(37,48,43,.58); backdrop-filter: blur(5px); }
