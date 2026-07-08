@@ -278,7 +278,10 @@ if __name__ == "__main__":
     try:
         server = LocalThreadingHTTPServer((HOST, PORT), DailyMemoHandler)
         print("Server ready", flush=True)
+        print("終了するには、この画面で Ctrl+C を押してください。", flush=True)
         threading.Timer(1.0, lambda: webbrowser.open(f"http://{HOST}:{PORT}/")).start()
         server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nDaily Memoを停止しました。", flush=True)
     finally:
         (APP_DIR / ".daily-memo.pid").unlink(missing_ok=True)

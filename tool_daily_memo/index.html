@@ -61,14 +61,10 @@
         </div>
 
         <div id="entryView">
-          <div class="prompts" id="prompts"></div>
-          <div class="input-wrap">
-            <label for="memoInput">自由に話す・書く</label>
-            <textarea id="memoInput" rows="8" placeholder="頭に浮かんだことを、そのまま言葉にしてみましょう…"></textarea>
-            <div class="input-footer">
-              <span id="saveStatus">入力内容は自動保存されます</span>
-              <span id="charCount">0文字</span>
-            </div>
+          <div class="memo-fields" id="memoFields"></div>
+          <div class="input-footer">
+            <span id="saveStatus">入力内容は自動保存されます</span>
+            <span id="charCount">0文字</span>
           </div>
           <div class="actions">
             <button class="record-button" id="recordButton" type="button">
@@ -98,7 +94,7 @@
     <footer>
       <span>Small notes, meaningful days.</span>
       <span>あなたの記録は、この端末の中だけに保存されます。</span>
-      <span class="app-version" title="Daily Memo アプリバージョン">v0.1.0-alpha · build 1</span>
+      <span class="app-version" title="Daily Memo アプリバージョン">v0.1.0-alpha · build 2</span>
     </footer>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

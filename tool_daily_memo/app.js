@@ -17,7 +17,37 @@ const steps = {
 const stepOrder = Object.keys(steps);
 const todayKey = new Date().toLocaleDateString("sv-SE");
 const storageKey = `daily-memo:${todayKey}`;
-let state = JSON.parse(localStorage.getItem(storageKey) || '{"morning":"","noon":"","night":"","summaryDone":false}');
+function emptyEntry(step) {
+  return {
+    answers: steps[step].prompts.map(() => ""),
+    free: ""
+  };
+}
+
+function normalizeEntry(step, value) {
+  if (value && typeof value === "object" && Array.isArray(value.answers)) {
+    return {
+      answers: steps[step].prompts.map((_, index) => value.answers[index] || ""),
+      free: value.free || ""
+    };
+  }
+  if (typeof value === "string") {
+    return { answers: steps[step].prompts.map(() => ""), free: value };
+  }
+  return emptyEntry(step);
+}
+
+function normalizeState(raw) {
+  const parsed = JSON.parse(raw || '{}');
+  return {
+    morning: normalizeEntry("morning", parsed.morning),
+    noon: normalizeEntry("noon", parsed.noon),
+    night: normalizeEntry("night", parsed.night),
+    summaryDone: Boolean(parsed.summaryDone)
+  };
+}
+
+let state = normalizeState(localStorage.getItem(storageKey));
 let currentStep = "morning";
 let recognition = null;
 let isRecording = false;
@@ -26,8 +56,9 @@ let latestSummary = "";
 let settingsRequired = false;
 
 const $ = (id) => document.getElementById(id);
-const memoInput = $("memoInput");
+const memoFields = $("memoFields");
 const tabs = [...document.querySelectorAll(".step-tab")];
+let activeMemoInput = null;
 
 function formatDate() {
   const d = new Date();
@@ -43,8 +74,23 @@ function save() {
   updateProgress();
 }
 
+function entryToText(step) {
+  const entry = normalizeEntry(step, state[step]);
+  const lines = steps[step].prompts.map((prompt, index) => {
+    const answer = entry.answers[index]?.trim() || "（未入力）";
+    return `- ${prompt}\n${answer}`;
+  });
+  lines.push(`- 自由記入欄\n${entry.free?.trim() || "（未入力）"}`);
+  return lines.join("\n\n");
+}
+
+function entryHasText(step) {
+  const entry = normalizeEntry(step, state[step]);
+  return [...entry.answers, entry.free].some(value => value?.trim());
+}
+
 function buildPrompt() {
-  return `以下は私の今日1日の音声メモです。\n以下の3点を整理してください。\n\n+ 今日の気づきの中で「明日以降に活かせること」\n+ 今日感じた課題の中で「AIや仕組みで解決できそうなもの」\n+ 今日の行動の中で「継続するべきこと・やめるべきこと」\n\n【朝のメモ】\n${state.morning || "（未入力）"}\n\n【昼のメモ】\n${state.noon || "（未入力）"}\n\n【夜のメモ】\n${state.night || "（未入力）"}`;
+  return `以下は私の今日1日の音声メモです。\n以下の3点を整理してください。\n\n+ 今日の気づきの中で「明日以降に活かせること」\n+ 今日感じた課題の中で「AIや仕組みで解決できそうなもの」\n+ 今日の行動の中で「継続するべきこと・やめるべきこと」\n\n【朝のメモ】\n${entryToText("morning")}\n\n【昼のメモ】\n${entryToText("noon")}\n\n【夜のメモ】\n${entryToText("night")}`;
 }
 
 function render(step) {
@@ -64,22 +110,44 @@ function render(step) {
     $("summaryPreview").innerHTML = latestSummary ? renderMarkdown(latestSummary) : "";
     $("summaryPreview").classList.toggle("rendered", Boolean(latestSummary));
   } else {
-    $("prompts").innerHTML = data.prompts.map((p, i) => `<div class="prompt"><span>${i+1}</span>${p}</div>`).join("");
-    memoInput.value = state[step] || "";
+    const entry = normalizeEntry(step, state[step]);
+    memoFields.innerHTML = [
+      ...data.prompts.map((prompt, index) => `
+        <div class="memo-field">
+          <label for="memoInput-${index}"><span>${index + 1}</span>${prompt}</label>
+          <textarea id="memoInput-${index}" data-field-type="answer" data-index="${index}" rows="4" placeholder="ここに入力してください…"></textarea>
+        </div>`),
+      `<div class="memo-field memo-field-free">
+        <label for="memoInput-free"><span>＋</span>自由記入欄</label>
+        <textarea id="memoInput-free" data-field-type="free" rows="5" placeholder="項目に収まらないことを自由に書いてください…"></textarea>
+      </div>`
+    ].join("");
+    [...memoFields.querySelectorAll("textarea")].forEach(input => {
+      if (input.dataset.fieldType === "free") input.value = entry.free || "";
+      else input.value = entry.answers[Number(input.dataset.index)] || "";
+      input.addEventListener("focus", () => activeMemoInput = input);
+      input.addEventListener("input", handleMemoInput);
+    });
+    activeMemoInput = memoFields.querySelector("textarea");
     updateCount();
     const nextName = step === "morning" ? "昼" : step === "noon" ? "夜" : "まとめ";
     $("nextButton").innerHTML = `保存して${nextName}へ <span>→</span>`;
   }
 }
 
-function updateCount() { $("charCount").textContent = `${memoInput.value.length}文字`; }
+function getCurrentEntryText() {
+  const entry = normalizeEntry(currentStep, state[currentStep]);
+  return [...entry.answers, entry.free].join("");
+}
+
+function updateCount() { $("charCount").textContent = `${getCurrentEntryText().length}文字`; }
 function updateProgress() {
-  const done = ["morning", "noon", "night"].filter(key => state[key]?.trim()).length + (state.summaryDone ? 1 : 0);
+  const done = ["morning", "noon", "night"].filter(entryHasText).length + (state.summaryDone ? 1 : 0);
   $("progressText").textContent = `${done} / 4`;
   $("progressBar").style.width = `${done * 25}%`;
   tabs.forEach(tab => {
     const key = tab.dataset.step;
-    tab.classList.toggle("complete", key === "summary" ? state.summaryDone : Boolean(state[key]?.trim()));
+    tab.classList.toggle("complete", key === "summary" ? state.summaryDone : entryHasText(key));
   });
 }
 
@@ -147,7 +215,8 @@ function setupSpeech() {
   let baseText = "";
   recognition.onstart = () => {
     isRecording = true;
-    baseText = memoInput.value + (memoInput.value && !memoInput.value.endsWith("\n") ? "\n" : "");
+    activeMemoInput ||= memoFields.querySelector("textarea");
+    baseText = activeMemoInput.value + (activeMemoInput.value && !activeMemoInput.value.endsWith("\n") ? "\n" : "");
     $("recordButton").classList.add("recording");
     $("recordLabel").textContent = "音声入力を停止する";
     $("voiceNote").textContent = "聞いています。自然に話してください。";
@@ -160,10 +229,8 @@ function setupSpeech() {
       else interimText += text;
     }
     if (finalText) baseText += finalText;
-    memoInput.value = baseText + interimText;
-    state[currentStep] = memoInput.value;
-    updateCount();
-    save();
+    activeMemoInput.value = baseText + interimText;
+    handleMemoInput({ target: activeMemoInput });
   };
   recognition.onerror = (event) => {
     if (event.error !== "no-speech" && event.error !== "aborted") showToast("音声を認識できませんでした。マイク設定をご確認ください。");
@@ -178,14 +245,18 @@ function setupSpeech() {
 
 function stopRecording() { if (recognition && isRecording) recognition.stop(); }
 
-memoInput.addEventListener("input", () => {
-  state[currentStep] = memoInput.value;
+function handleMemoInput(event) {
+  const input = event.target;
+  const entry = normalizeEntry(currentStep, state[currentStep]);
+  if (input.dataset.fieldType === "free") entry.free = input.value;
+  else entry.answers[Number(input.dataset.index)] = input.value;
+  state[currentStep] = entry;
+  activeMemoInput = input;
   updateCount();
   save();
-});
+}
 tabs.forEach(tab => tab.addEventListener("click", () => render(tab.dataset.step)));
 $("nextButton").addEventListener("click", () => {
-  state[currentStep] = memoInput.value;
   save();
   const next = stepOrder[stepOrder.indexOf(currentStep) + 1];
   render(next);
@@ -209,7 +280,7 @@ $("summarizeButton").addEventListener("click", async () => {
     const response = await fetch("/api/summarize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ morning: state.morning, noon: state.noon, night: state.night })
+      body: JSON.stringify({ morning: entryToText("morning"), noon: entryToText("noon"), night: entryToText("night") })
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "処理に失敗しました。");
@@ -231,7 +302,7 @@ $("summarizeButton").addEventListener("click", async () => {
 });
 $("resetButton").addEventListener("click", () => {
   if (!confirm("今日のメモをすべて消去しますか？この操作は元に戻せません。")) return;
-  state = { morning: "", noon: "", night: "", summaryDone: false };
+  state = { morning: emptyEntry("morning"), noon: emptyEntry("noon"), night: emptyEntry("night"), summaryDone: false };
   save(); render("morning"); showToast("今日のメモをリセットしました");
 });
 

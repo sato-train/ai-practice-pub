@@ -52,10 +52,13 @@ h1 em { color: var(--sage-dark); font-weight: 400; }
 .panel-heading h2 { margin: 0 0 9px; font-family: Georgia, "Noto Serif JP", serif; font-size: 31px; font-weight: 400; }
 .panel-heading p { margin: 0; color: var(--muted); font-size: 13px; }
 .step-number { color: #d8d2c6; font-family: Georgia, serif; font-size: 42px; font-style: italic; }
-.prompts { display: grid; gap: 1px; margin-bottom: 30px; background: var(--line); border: 1px solid var(--line); }
-.prompt { display: flex; gap: 14px; align-items: center; padding: 15px 18px; background: #f8f6f0; font-size: 13px; }
-.prompt span { display: grid; place-items: center; flex: 0 0 23px; height: 23px; color: var(--sage-dark); background: #e5e9e0; border-radius: 50%; font-size: 10px; font-weight: 600; }
-.input-wrap label { display: block; margin-bottom: 10px; font-size: 12px; font-weight: 600; }
+.memo-fields { display: grid; gap: 18px; }
+.memo-field { display: grid; gap: 9px; }
+.memo-field label { display: flex; gap: 10px; align-items: center; font-size: 12px; font-weight: 600; }
+.memo-field label span { display: grid; place-items: center; flex: 0 0 23px; height: 23px; color: var(--sage-dark); background: #e5e9e0; border-radius: 50%; font-size: 10px; font-weight: 600; }
+.memo-field-free { margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--line); }
+.memo-field textarea { min-height: 112px; }
+.memo-field-free textarea { min-height: 138px; }
 textarea { display: block; width: 100%; min-height: 170px; padding: 18px; resize: vertical; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 3px; outline: none; line-height: 1.9; }
 textarea:focus { border-color: var(--sage); box-shadow: 0 0 0 3px rgba(126,145,126,.12); }
 textarea::placeholder { color: #aaa99f; }
