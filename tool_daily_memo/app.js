@@ -114,7 +114,10 @@ function render(step) {
     memoFields.innerHTML = [
       ...data.prompts.map((prompt, index) => `
         <div class="memo-field">
-          <label for="memoInput-${index}"><span>${index + 1}</span>${prompt}</label>
+          <div class="memo-field-head">
+            <label for="memoInput-${index}"><span>${index + 1}</span>${prompt}</label>
+            ${step === "morning" && index === 0 ? '<button class="import-button" id="importPriorityButton" type="button">前日のまとめから取込</button>' : ''}
+          </div>
           <textarea id="memoInput-${index}" data-field-type="answer" data-index="${index}" rows="4" placeholder="ここに入力してください…"></textarea>
         </div>`),
       `<div class="memo-field memo-field-free">
@@ -129,6 +132,8 @@ function render(step) {
       input.addEventListener("input", handleMemoInput);
     });
     activeMemoInput = memoFields.querySelector("textarea");
+    const importButton = $("importPriorityButton");
+    if (importButton) importButton.addEventListener("click", () => importPreviousPriority(false));
     updateCount();
     const nextName = step === "morning" ? "昼" : step === "noon" ? "夜" : "まとめ";
     $("nextButton").innerHTML = `保存して${nextName}へ <span>→</span>`;
@@ -311,6 +316,42 @@ setupSpeech();
 updateProgress();
 render("morning");
 
+function applyPreviousPriority(priority) {
+  const entry = normalizeEntry("morning", state.morning);
+  entry.answers[0] = priority;
+  state.morning = entry;
+  if (currentStep === "morning") {
+    const input = memoFields.querySelector('textarea[data-field-type="answer"][data-index="0"]');
+    if (input) input.value = priority;
+  }
+  updateCount();
+  save();
+}
+
+async function importPreviousPriority(silent = false) {
+  const entry = normalizeEntry("morning", state.morning);
+  if (entry.answers[0]?.trim()) return;
+  try {
+    const result = await fetch("/api/import-priority").then(response => response.json());
+    renderPreviousSource(result);
+    if (!result.priority?.trim()) {
+      if (!silent) showToast("前日の『明日の優先事項』が見つかりませんでした");
+      return;
+    }
+    applyPreviousPriority(result.priority.trim());
+    if (!silent) showToast(`${result.sourceDate} のまとめを取り込みました`);
+  } catch {
+    if (!silent) showToast("前日のまとめを取り込めませんでした");
+  }
+}
+
+function renderPreviousSource(result) {
+  const source = $("previousSource");
+  if (!source || !result?.path) return;
+  source.hidden = false;
+  source.innerHTML = `<strong>前回データの参照元</strong><span>${result.sourceDate} のMarkdown</span><code>${result.path}</code><span>${result.priority?.trim() ? `抽出内容: ${result.priority.trim()}` : "「明日の優先事項」は見つかりませんでした"}</span>`;
+}
+
 fetch("/api/status")
   .then(response => response.json())
   .then(status => {
@@ -319,12 +360,20 @@ fetch("/api/status")
       ? `${status.provider} / 保存先: ${status.saveDirectory || "未設定"}`
       : "Codex CLIが見つかりません。";
     if (!status.saveDirectoryConfigured) openSettings(true);
-    else $("saveDirectoryInput").value = status.saveDirectory;
+    else {
+      $("saveDirectoryInput").value = status.saveDirectory;
+      importPreviousPriority(true);
+    }
   })
   .catch(() => {
     $("apiStatus").className = "api-status error";
     $("apiStatus").textContent = "APIサーバーに接続できません。ショートカットから起動してください。";
   });
+
+fetch("/api/import-priority")
+  .then(response => response.json())
+  .then(renderPreviousSource)
+  .catch(() => {});
 
 fetch("/api/today")
   .then(response => response.json())

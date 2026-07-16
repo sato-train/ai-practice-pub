@@ -6,7 +6,7 @@ import sys
 import threading
 import subprocess
 import webbrowser
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -62,6 +62,15 @@ class DailyMemoHandler(SimpleHTTPRequestHandler):
                 "exists": content is not None,
                 "path": str(path) if path else "",
                 "markdown": content or "",
+            })
+            return
+        if self.path == "/api/import-priority":
+            source_date, source_path, priority = get_previous_priority()
+            self.send_json(200, {
+                "exists": bool(priority),
+                "sourceDate": source_date,
+                "path": str(source_path) if source_path else "",
+                "priority": priority or "",
             })
             return
         if self.path == "/api/status":
@@ -142,6 +151,7 @@ def build_prompt(memos):
 ## 明日以降に活かせること
 ## AIや仕組みで解決できそうなもの
 ## 継続するべきこと・やめるべきこと
+## 明日の優先事項
 
 【朝のメモ】
 {memos['morning'] or '（未入力）'}
@@ -258,6 +268,40 @@ tags:
 """
     path.write_text(content, encoding="utf-8")
     return path
+
+
+def extract_tomorrow_priority(markdown):
+    lines = markdown.replace("\r\n", "\n").split("\n")
+    collecting = False
+    collected = []
+    for line in lines:
+        heading = line.strip().lstrip("#").strip()
+        if line.strip().startswith("#"):
+            if collecting:
+                break
+            if heading.startswith("明日の優先事項"):
+                collecting = True
+            continue
+        if collecting:
+            collected.append(line)
+    text = "\n".join(collected).strip()
+    while text.startswith(("- ", "+ ", "* ")):
+        text = text[2:].strip()
+    return text
+
+
+def get_previous_priority():
+    save_dir = get_save_dir()
+    source_date = datetime.now() - timedelta(days=1)
+    source_date_text = f"{source_date:%Y-%m-%d}"
+    if not save_dir:
+        return source_date_text, None, None
+    path = save_dir / f"{source_date_text}.md"
+    try:
+        markdown = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return source_date_text, path, None
+    return source_date_text, path, extract_tomorrow_priority(markdown)
 
 
 def get_today_markdown():

@@ -29,12 +29,6 @@
     </header>
 
     <main>
-      <section class="hero">
-        <p class="eyebrow">A QUIET PLACE FOR YOUR THOUGHTS</p>
-        <h1>声にして、<br><em>一日を整える。</em></h1>
-        <p class="hero-copy">朝・昼・夜、ほんの2〜3分。思考を言葉にして、<br class="desktop-only">明日につながる小さな気づきを残しましょう。</p>
-      </section>
-
       <section class="progress-wrap" aria-label="今日の進捗">
         <div class="progress-head">
           <span>今日の記録</span>
@@ -82,6 +76,7 @@
             <div><h3>一日分のメモをCodexで整理</h3><p>ChatGPTでログインしたCodexが整理し、結果をMarkdownとして自動保存します。</p></div>
           </div>
           <div class="api-status" id="apiStatus">接続状態を確認しています…</div>
+          <div class="previous-source" id="previousSource" hidden></div>
           <div class="summary-preview" id="summaryPreview"></div>
           <div class="actions summary-actions">
             <button class="record-button copy-button" id="copyButton" type="button">結果をコピー</button>
@@ -94,7 +89,7 @@
     <footer>
       <span>Small notes, meaningful days.</span>
       <span>あなたの記録は、この端末の中だけに保存されます。</span>
-      <span class="app-version" title="Daily Memo アプリバージョン">v0.1.0-alpha · build 2</span>
+      <span class="app-version" title="Daily Memo アプリバージョン">v0.2.0-alpha · build 3</span>
     </footer>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
